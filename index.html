@@ -470,7 +470,9 @@
   var finalSub         = document.getElementById('finalSub');
   var finalFun         = document.getElementById('finalFun');
 
-  var blown = false;
+  var blown    = false;
+  var popCtx    = null;
+  var popBuffer = null;
 
   /* ---- Background floaties (8, slow, subtle) ---- */
   var floatyList = [
@@ -497,11 +499,50 @@
   function hide(s)        { s.classList.remove('active'); }
   function wait(ms, fn)   { return setTimeout(fn, ms); }
 
+  /* ---- Vercel event tracking (shows in Vercel → Functions → Logs) ---- */
+  function track(event) {
+    try {
+      fetch('/api/track?event=' + encodeURIComponent(event))
+        .catch(function () {});
+    } catch (e) {}
+  }
+  track('page-opened');
+
   /* ---- Cinematic intro text sequence ---- */
   wait(500,  function () { line1.classList.add('visible'); });
   wait(1700, function () { line2.classList.add('visible'); });
   wait(2600, function () { document.getElementById('line3').classList.add('visible'); });
   wait(3100, function () { btnWrap.classList.add('visible'); });
+
+  /* ---- Pop sound — own Web Audio context, completely separate from bgMusic ---- */
+  function initPopAudio() {
+    try {
+      popCtx = new (window.AudioContext || window.webkitAudioContext)();
+      fetch('src/pop.mp3')
+        .then(function (r) { return r.arrayBuffer(); })
+        .then(function (buf) { return popCtx.decodeAudioData(buf); })
+        .then(function (decoded) { popBuffer = decoded; })
+        .catch(function () {});
+    } catch (e) {}
+  }
+
+  function playPop() {
+    if (popCtx && popBuffer) {
+      if (popCtx.state === 'suspended') { popCtx.resume(); }
+      var src  = popCtx.createBufferSource();
+      src.buffer = popBuffer;
+      var gain = popCtx.createGain();
+      gain.gain.value = 0.85;
+      src.connect(gain);
+      gain.connect(popCtx.destination);
+      src.start(0);
+    } else {
+      /* fallback: <audio> element */
+      popSound.volume = 0.80;
+      popSound.currentTime = 0;
+      popSound.play().catch(function () {});
+    }
+  }
 
   /* ---- Music: very low volume, fade in over 5 seconds ---- */
   function startMusicFadeIn() {
@@ -519,6 +560,8 @@
 
   /* ---- Start button ---- */
   startBtn.addEventListener('click', function () {
+    track('started');
+    initPopAudio();      /* preload pop sound inside a user-gesture so iOS allows it */
     startMusicFadeIn();
     hide(introScreen);
     wait(1300, function () { show(cakeScreen); startListening(); });
@@ -640,10 +683,8 @@
     blowFeedback.classList.add('show');
     wait(1700, function () { blowFeedback.classList.remove('show'); });
 
-    /* pop sound noticeably louder than music */
-    popSound.volume = 0.80;
-    popSound.currentTime = 0;
-    popSound.play().catch(function () {});
+    track('candle-blown');
+    playPop();   /* dedicated Web Audio context — never clashes with bgMusic */
 
     fireConfetti();
 
@@ -662,6 +703,7 @@
           hide(transitionScreen);
           wait(1100, function () {
             show(finalScreen);
+            track('final-seen');
             wait(350,  function () { finalH1.classList.add('show'); });
             wait(1500, function () { finalSub.classList.add('show'); });
             wait(2700, function () { finalFun.classList.add('show'); });
