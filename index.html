@@ -397,6 +397,7 @@
 <div id="intro" class="screen active">
   <p class="line" id="line1">Hey Sheikh Sanzida… 💜</p>
   <p class="line" id="line2">I wanted to make something just for you…</p>
+  <p class="line" id="line3" style="font-size:clamp(0.7rem,2.8vw,1rem); color:#d49aaa; margin-top:0.2rem;">🎧 Use headphones for a better experience</p>
   <div class="btn-wrap" id="btnWrap">
     <button class="btn" id="startBtn">Start ✨</button>
   </div>
@@ -499,13 +500,14 @@
   /* ---- Cinematic intro text sequence ---- */
   wait(500,  function () { line1.classList.add('visible'); });
   wait(1700, function () { line2.classList.add('visible'); });
+  wait(2600, function () { document.getElementById('line3').classList.add('visible'); });
   wait(3100, function () { btnWrap.classList.add('visible'); });
 
   /* ---- Music: very low volume, fade in over 5 seconds ---- */
   function startMusicFadeIn() {
     bgMusic.volume = 0;
     bgMusic.play().catch(function () { /* autoplay blocked — silently skip */ });
-    var TARGET_VOL = 0.30; /* audible on phone speakers; calibration handles mic offset */
+    var TARGET_VOL = 0.22; /* audible on phone speakers; calibration handles mic offset */
     var steps = 50;
     var step  = 0;
     var iv = setInterval(function () {
@@ -572,8 +574,8 @@
           } else {
             /* --- Phase 2: Listen for blow --- */
             /* threshold = noiseFloor + margin, clamped to sensible range */
-            var MARGIN    = 42;
-            var threshold = Math.min(115, Math.max(58, noiseFloor + MARGIN));
+            var MARGIN    = 47;
+            var threshold = Math.min(120, Math.max(63, noiseFloor + MARGIN));
             var holdNeeded = 4;
             var holdCount  = 0;
 
