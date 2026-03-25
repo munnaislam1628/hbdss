@@ -435,7 +435,7 @@
 <div id="final" class="screen">
   <h1 id="finalH1">Happy Birthday Sheikh Sanzida 💖</h1>
   <p class="sub"  id="finalSub">I hope this made you smile.</p>
-  <p class="fun-line" id="finalFun">I owe you a proper burger treat 🍔</p>
+  <p class="fun-line" id="finalFun">Btw, I owe you a proper burger treat… 🍔</p>
 </div>
 
 <div class="hearts-container" id="hearts"></div>
@@ -505,7 +505,7 @@
   function startMusicFadeIn() {
     bgMusic.volume = 0;
     bgMusic.play().catch(function () { /* autoplay blocked — silently skip */ });
-    var TARGET_VOL = 0.10; /* intentionally very low — mic must hear blow, not music */
+    var TARGET_VOL = 0.30; /* audible on phone speakers; calibration handles mic offset */
     var steps = 50;
     var step  = 0;
     var iv = setInterval(function () {
@@ -541,6 +541,8 @@
 
         /* Dedicated AudioContext — mic only, NO connection to speakers */
         var micCtx   = new (window.AudioContext || window.webkitAudioContext)();
+        /* On iOS/Android, new AudioContext can suspend <audio> — kick it back */
+        if (bgMusic.paused) { bgMusic.play().catch(function () {}); }
         var source   = micCtx.createMediaStreamSource(stream);
         var analyser = micCtx.createAnalyser();
         analyser.fftSize      = 256;
