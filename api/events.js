@@ -15,7 +15,7 @@ async function getCollection() {
     cachedClient = new MongoClient(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
     await cachedClient.connect();
   }
-  return cachedClient.db('hbdss').collection('events');
+  return cachedClient.db('logs_of_hbd').collection('logs');
 }
 
 module.exports = async function handler(req, res) {
