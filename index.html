@@ -390,14 +390,15 @@
 <div class="bg-floaties" id="bgFloaties"></div>
 
 <!-- Audio: separate elements, volume controlled in JS -->
-<audio id="bgMusic" src="src/music.mp3" loop preload="none"></audio>
-<audio id="popSound" src="src/pop.mp3" preload="none"></audio>
+<audio id="bgMusic" src="src/music.mp3" loop preload="auto"></audio>
+<audio id="popSound" src="src/pop.mp3" preload="auto"></audio>
 
 <!-- Screen 1: Intro -->
 <div id="intro" class="screen active">
   <p class="line" id="line1">Hey Sheikh Sanzida… 💜</p>
   <p class="line" id="line2">I wanted to make something just for you…</p>
   <p class="line" id="line3" style="font-size:clamp(0.7rem,2.8vw,1rem); color:#d49aaa; margin-top:0.2rem;">🎧 Use headphones for a better experience</p>
+  <p id="audioLoading" style="font-size:clamp(0.65rem,2.5vw,0.8rem); color:#d49aaa; margin-top:0.6rem; opacity:0; transition:opacity 0.5s ease;">Loading music… 🎵</p>
   <div class="btn-wrap" id="btnWrap">
     <button class="btn" id="startBtn">Start ✨</button>
   </div>
@@ -474,6 +475,33 @@
   var popCtx    = null;
   var popBuffer = null;
 
+  /* ---- Audio preload gating ---- */
+  var audioLoading   = document.getElementById('audioLoading');
+  var musicReady     = false;
+  var popReady       = false;
+  var textSeqDone    = false;
+
+  function checkAllReady() {
+    if (musicReady && popReady && textSeqDone) {
+      audioLoading.style.opacity = '0';
+      btnWrap.classList.add('visible');
+    }
+  }
+
+  function markMusicReady() { musicReady = true; checkAllReady(); }
+  function markPopReady()   { popReady   = true; checkAllReady(); }
+
+  bgMusic.addEventListener('canplaythrough', markMusicReady, { once: true });
+  bgMusic.addEventListener('error',          markMusicReady, { once: true });
+  popSound.addEventListener('canplaythrough', markPopReady,  { once: true });
+  popSound.addEventListener('error',          markPopReady,  { once: true });
+
+  /* Safety fallback: if files are missing / slow, unlock button after 8s */
+  setTimeout(function () {
+    if (!musicReady) markMusicReady();
+    if (!popReady)   markPopReady();
+  }, 8000);
+
   /* ---- Background floaties (8, slow, subtle) ---- */
   var floatyList = [
     { e: '🌻', o: 0.28 }, { e: '🪻', o: 0.20 }, { e: '🌸', o: 0.18 },
@@ -511,8 +539,17 @@
   /* ---- Cinematic intro text sequence ---- */
   wait(500,  function () { line1.classList.add('visible'); });
   wait(1700, function () { line2.classList.add('visible'); });
-  wait(2600, function () { document.getElementById('line3').classList.add('visible'); });
-  wait(3100, function () { btnWrap.classList.add('visible'); });
+  wait(2600, function () {
+    document.getElementById('line3').classList.add('visible');
+  });
+  wait(3100, function () {
+    textSeqDone = true;
+    /* show loading hint only if audio still pending */
+    if (!musicReady || !popReady) {
+      audioLoading.style.opacity = '1';
+    }
+    checkAllReady();
+  });
 
   /* ---- Pop sound — own Web Audio context, completely separate from bgMusic ---- */
   function initPopAudio() {
