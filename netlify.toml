@@ -1,0 +1,17 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Route /api/track and /api/events to the Netlify Functions equivalents
+# This keeps the frontend fetch('/api/track') calls working unchanged.
+[[redirects]]
+  from   = "/api/track"
+  to     = "/.netlify/functions/track"
+  status = 200
+  force  = true
+
+[[redirects]]
+  from   = "/api/events"
+  to     = "/.netlify/functions/events"
+  status = 200
+  force  = true

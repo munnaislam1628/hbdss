@@ -18,10 +18,10 @@ async function getCollection() {
   return cachedClient.db('hbdss').collection('events');
 }
 
-module.exports = async function handler(req, res) {
-  const url = new URL(req.url, 'http://localhost');
-  if (url.searchParams.get('key') !== 'hbdss2026') {
-    return res.status(401).send('Unauthorized');
+exports.handler = async function (event) {
+  const params = event.queryStringParameters || {};
+  if (params.key !== 'hbdss2026') {
+    return { statusCode: 401, body: 'Unauthorized' };
   }
 
   let docs  = [];
@@ -89,6 +89,9 @@ ${dbErr ? `<div class="err">⚠️ DB error: ${dbErr}</div>` : ''}
 </table>
 </body></html>`;
 
-  res.setHeader('Content-Type', 'text/html');
-  res.status(200).send(html);
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': 'text/html' },
+    body: html
+  };
 };
