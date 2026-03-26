@@ -471,15 +471,15 @@
   var finalSub         = document.getElementById('finalSub');
   var finalFun         = document.getElementById('finalFun');
 
-  var blown    = false;
+  var blown     = false;
   var popCtx    = null;
   var popBuffer = null;
 
   /* ---- Audio preload gating ---- */
-  var audioLoading   = document.getElementById('audioLoading');
-  var musicReady     = false;
-  var popReady       = false;
-  var textSeqDone    = false;
+  var audioLoading = document.getElementById('audioLoading');
+  var musicReady   = false;
+  var popReady     = false;
+  var textSeqDone  = false;
 
   function checkAllReady() {
     if (musicReady && popReady && textSeqDone) {
@@ -523,9 +523,9 @@
   });
 
   /* ---- Helpers ---- */
-  function show(s)        { s.classList.add('active'); }
-  function hide(s)        { s.classList.remove('active'); }
-  function wait(ms, fn)   { return setTimeout(fn, ms); }
+  function show(s)      { s.classList.add('active'); }
+  function hide(s)      { s.classList.remove('active'); }
+  function wait(ms, fn) { return setTimeout(fn, ms); }
 
   /* ---- Vercel event tracking (shows in Vercel → Functions → Logs) ---- */
   function track(event) {
@@ -585,7 +585,7 @@
   function startMusicFadeIn() {
     bgMusic.volume = 0;
     bgMusic.play().catch(function () { /* autoplay blocked — silently skip */ });
-    var TARGET_VOL = 0.22; /* audible on phone speakers; calibration handles mic offset */
+    var TARGET_VOL = 0.22;
     var steps = 50;
     var step  = 0;
     var iv = setInterval(function () {
@@ -598,7 +598,7 @@
   /* ---- Start button ---- */
   startBtn.addEventListener('click', function () {
     track('started');
-    initPopAudio();      /* preload pop sound inside a user-gesture so iOS allows it */
+    initPopAudio();
     startMusicFadeIn();
     hide(introScreen);
     wait(1300, function () { show(cakeScreen); startListening(); });
@@ -618,7 +618,14 @@
       useFallback(); return;
     }
 
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl:  false
+      },
+      video: false
+    })
       .then(function (stream) {
 
         /* Dedicated AudioContext — mic only, NO connection to speakers */
@@ -637,9 +644,9 @@
 
         /* --- Phase 1: Calibrate noise floor (~2 seconds / 60 frames) --- */
         hintText.textContent = 'Calibrating mic… please hold still 🎙️';
-        var noiseFloor   = 0;
-        var calFrame     = 0;
-        var CAL_FRAMES   = 60;
+        var noiseFloor = 0;
+        var calFrame   = 0;
+        var CAL_FRAMES = 60;
 
         function calibrate() {
           analyser.getByteFrequencyData(dataArray);
@@ -653,11 +660,11 @@
             requestAnimationFrame(calibrate);
           } else {
             /* --- Phase 2: Listen for blow --- */
-            /* threshold = noiseFloor + margin, clamped to sensible range */
-            var MARGIN    = 47;
-            var threshold = Math.min(120, Math.max(63, noiseFloor + MARGIN));
-            var holdNeeded = 4;
-            var holdCount  = 0;
+            var MARGIN        = 18;
+            var threshold     = Math.min(115, Math.max(55, noiseFloor + MARGIN));
+            var WINDOW_SIZE   = 6;
+            var WINDOW_NEEDED = 3;
+            var blowWindow    = [];
 
             hintText.textContent = 'Ready! Take a breath and blow 💨';
             volWrap.classList.add('visible');
@@ -673,14 +680,14 @@
               var headroom = Math.max(0, avg - noiseFloor);
               volBar.style.width = Math.min(100, (headroom / MARGIN) * 80) + '%';
 
-              if (avg > threshold) {
-                holdCount++;
-                if (holdCount >= holdNeeded) {
-                  blowCandles(stream, micCtx);
-                  return;
-                }
-              } else {
-                holdCount = 0;
+              /* sliding window — push 1 if above threshold, 0 if not */
+              blowWindow.push(avg > threshold ? 1 : 0);
+              if (blowWindow.length > WINDOW_SIZE) blowWindow.shift();
+
+              var hits = blowWindow.reduce(function(a, b){ return a + b; }, 0);
+              if (blowWindow.length === WINDOW_SIZE && hits >= WINDOW_NEEDED) {
+                blowCandles(stream, micCtx);
+                return;
               }
               requestAnimationFrame(tick);
             }
@@ -721,7 +728,7 @@
     wait(1700, function () { blowFeedback.classList.remove('show'); });
 
     track('candle-blown');
-    playPop();   /* dedicated Web Audio context — never clashes with bgMusic */
+    playPop();
 
     fireConfetti();
 
